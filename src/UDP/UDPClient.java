@@ -10,13 +10,13 @@ import java.nio.ByteBuffer;
 public class UDPClient
 {
     private static final int SERVER_PORT = 9876;
-    private static final int CLIENT_PORT = 6789;
+//    private static final int CLIENT_PORT = 6789;
 
     public static void main(String args[]) throws Exception
     {
         // Send an initial message to the server to initiate communication
-        DatagramSocket socket = new DatagramSocket(CLIENT_PORT);
-        String initialMessage = "Client started and ready!";
+        DatagramSocket socket = new DatagramSocket();
+        String initialMessage = String.format("Client from port %d started and ready!", socket.getLocalPort());
 
         InetAddress address = InetAddress.getByName("localhost");
 
@@ -33,6 +33,7 @@ public class UDPClient
 
         // Convert user integer input to bytes
         int selection = Utils.menuSelection(1, 5);
+        System.out.println("You selected: " + selection);
         ByteBuffer buffer = ByteBuffer.allocate(4);
         buffer.putInt(selection);
         sendData = buffer.array();
