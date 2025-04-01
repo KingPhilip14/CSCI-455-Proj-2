@@ -5,37 +5,67 @@ import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.ByteBuffer;
 
 public class UDPClient
 {
+    private static final int SERVER_PORT = 9876;
+    private static final int CLIENT_PORT = 6789;
+
     public static void main(String args[]) throws Exception
     {
+        // Send an initial message to the server to initiate communication
+        DatagramSocket socket = new DatagramSocket(CLIENT_PORT);
+        String initialMessage = "Client started and ready!";
 
-        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+        InetAddress address = InetAddress.getByName("localhost");
 
-        DatagramSocket clientSocket = new DatagramSocket();
+        byte[] sendData = initialMessage.getBytes();
+        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
+        socket.send(sendPacket);
 
-        InetAddress IPAddress = InetAddress.getByName("localhost");
-
-        byte[] sendData;
+        // Read in the main menu from the server
         byte[] receiveData = new byte[1024];
-
-        System.out.println("The UDP client is on. Please enter your input:");
-
-        String sentence = inFromUser.readLine();
-        sendData = sentence.getBytes();
-
-        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6789);
-
-        clientSocket.send(sendPacket);
-
         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+        socket.receive(receivePacket);
+        String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
+        System.out.print(receivedMessage);
 
-        clientSocket.receive(receivePacket);
+        // Convert user integer input to bytes
+        int selection = Utils.menuSelection(1, 5);
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.putInt(selection);
+        sendData = buffer.array();
 
-        String modifiedSentence = new String(receivePacket.getData());
+        // Send menu selection to server
+        sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
+        socket.send(sendPacket);
 
-        System.out.println("FROM SERVER:" + modifiedSentence);
-        clientSocket.close();
+//        BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+//
+//        DatagramSocket clientSocket = new DatagramSocket();
+//
+//        InetAddress IPAddress = InetAddress.getByName("localhost");
+//
+//        byte[] sendData;
+//        byte[] receiveData = new byte[1024];
+//
+//        System.out.println("The UDP client is on. Please enter your input:");
+//
+//        String sentence = inFromUser.readLine();
+//        sendData = sentence.getBytes();
+//
+//        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6789);
+//
+//        clientSocket.send(sendPacket);
+//
+//        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+//
+//        clientSocket.receive(receivePacket);
+//
+//        String modifiedSentence = new String(receivePacket.getData());
+//
+//        System.out.println("FROM SERVER:" + modifiedSentence);
+//        clientSocket.close();
     }
 }
