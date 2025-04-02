@@ -176,6 +176,11 @@ public class UPDServer
             }
         }
 
+        private void contributeToEvent()
+        {
+
+        }
+
         private void handleEventCreation()
         {
             System.out.printf("\nClient at port %d is trying to create a new event.", PORT);

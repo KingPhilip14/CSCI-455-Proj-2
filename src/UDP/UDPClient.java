@@ -9,7 +9,6 @@ import java.util.Scanner;
 public class UDPClient
 {
     private static final int SERVER_PORT = 9876;
-//    private static final int CLIENT_PORT = 6789;
 
     public static void main(String args[]) throws Exception
     {
@@ -22,20 +21,43 @@ public class UDPClient
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
         socket.send(sendPacket);
 
-        // Read in the main menu from the server
-        printServerMessage(socket);
-
-        // Convert user integer input to bytes
-        int selection = Utils.menuSelection(1, 5);
-
-        sendData = String.valueOf(selection).getBytes();
-
-        // Send menu selection to server
-        sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
-        socket.send(sendPacket);
+        menuSelection(socket, address, 1, 5);
+//        // Read in the main menu from the server
+//        printServerMessage(socket);
+//
+//        // Convert user integer input to bytes
+//        int selection = Utils.menuSelection(1, 5);
+//
+//        sendData = String.valueOf(selection).getBytes();
+//
+//        // Send menu selection to server
+//        sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
+//        socket.send(sendPacket);
 
         // Creating an event logic
         createEvent(socket, address);
+    }
+
+    private static void menuSelection(DatagramSocket socket, InetAddress address, int min, int max)
+    {
+        try
+        {
+            // Read in the main menu from the server
+            printServerMessage(socket);
+
+            // Convert user integer input to bytes
+            int selection = Utils.menuSelection(min, max);
+
+            byte[] sendData = String.valueOf(selection).getBytes();
+
+            // Send menu selection to server
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);
+            socket.send(sendPacket);
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     private static void printServerMessage(DatagramSocket socket)
