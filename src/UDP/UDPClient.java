@@ -34,9 +34,8 @@ public class UDPClient
         // Convert user integer input to bytes
         int selection = Utils.menuSelection(1, 5);
         System.out.println("You selected: " + selection);
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        buffer.putInt(selection);
-        sendData = buffer.array();
+
+        sendData = String.valueOf(selection).getBytes();
 
         // Send menu selection to server
         sendPacket = new DatagramPacket(sendData, sendData.length, address, SERVER_PORT);

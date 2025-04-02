@@ -61,7 +61,7 @@ public class UPDServer
             }
             else
             {
-                System.out.println("Client with port " + port  + " sent new packages");
+                System.out.println("Client with port " + port  + " sent new packages\n");
 
                 // Otherwise, send the necessary information to the existing client
                 clientThread.processClientMessage(clientInputPacket);
@@ -115,11 +115,10 @@ public class UPDServer
                 byte[] outputData = mainPrompt.getBytes();
                 outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
                 clientSocket.send(outputPacket);
-                System.out.printf("Sent a message to a client. Message \"%s\" came from prompt() method\n",
-                        mainPrompt);
+                System.out.printf("Sent a message to client with port %d. Message came from prompt() method\n",
+                        PORT);
 
-                System.out.println("entering receiveClientInput");
-                return receiveClientInput();
+                return Integer.parseInt(receiveClientInput());
             }
             catch(IOException e)
             {
@@ -130,7 +129,7 @@ public class UPDServer
             return -1;
         }
 
-        private int receiveClientInput()
+        private String receiveClientInput()
         {
             while(true)
             {
@@ -141,12 +140,7 @@ public class UPDServer
                 {
                     DatagramPacket receivedPacket = messageQueue.poll();
 
-                    ByteBuffer buffer = ByteBuffer.wrap(receivedPacket.getData());
-                    int selection = buffer.getInt();
-                    System.out.println("Received number from client: " + selection);
-
-                    // Convert the user's input from bytes to an int
-                    return selection;
+                    return new String(receivedPacket.getData(), 0, receivedPacket.getLength());
                 }
             }
         }
@@ -154,6 +148,124 @@ public class UPDServer
         private void processClientMessage(DatagramPacket packet)
         {
             messageQueue.add(packet);
+        }
+
+        private void manageClientMenuInput(int clientSelection)
+        {
+            switch(clientSelection)
+            {
+                case 1:
+                    handleEventCreation();
+                    break;
+//                case 2:
+//                    contributeToEvent();
+//                    break;
+//                case 3:
+//                    viewCurrentEvents();
+//                    break;
+//                case 4:
+//                    viewPastEvents();
+//                    break;
+//                default:
+//                    sendMessageToClient("Connection with the server is being severed...");
+//                    closeConnection(dataOutToClient, dataInFromClient);
+//                    System.out.println("\nCommunications with a client ended.");
+//                    break;
+            }
+        }
+
+        private void handleEventCreation()
+        {
+            System.out.printf("\nClient at port %d is trying to create a new event.", PORT);
+
+            // Get the event details from the client
+            String eventName = createEventName();
+            double goal = Double.parseDouble(createEventGoal());
+            String deadline = createEventDeadline();
+
+            Event newEvent = new Event(eventName, goal, deadline);
+            addCurrentEvent(newEvent);
+
+            System.out.printf("\nA new event was received from a client!\n" +
+                    "The event was added to the list of current events." +
+                    "\nCurrent event list size: %d" +
+                    "\nEvent information:" +
+                    "\n%s\n", currentEvents.size(), newEvent.toString());
+        }
+
+        private void addCurrentEvent(Event event)
+        {
+            LOCK.lock();
+            try
+            {
+                currentEvents.add(event);
+                Collections.sort(currentEvents);
+
+                System.out.println();
+            }
+            finally
+            {
+                LOCK.unlock();
+            }
+        }
+
+        private String createEventName()
+        {
+            try
+            {
+                byte[] outputData = "\nProvide the name of the event you want to create > ".getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+
+                return receiveClientInput();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+
+            // Default event name
+            return "Default Event Name #" + currentEvents.size();
+        }
+
+        private String createEventGoal()
+        {
+            try
+            {
+                byte[] outputData = "\nProvide the amount of money you'd like to raise (e.g., 100.00) > ".getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+
+                return receiveClientInput();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+
+            // Default amount to raise
+            return "100.00";
+        }
+
+        private String createEventDeadline()
+        {
+            try
+            {
+                byte[] outputData = String.format("\nWhat day would you like the event to end?\n" +
+                        "Please note that every event will conclude at %s\n" +
+                        "Provide the input as yyyy-mm-dd > ", Event.CONCLUDING_TIME).getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+
+                return receiveClientInput();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+
+            // Default deadline
+            return "2100-01-01";
         }
     }
 }
