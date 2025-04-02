@@ -91,11 +91,20 @@ public class UDPClient
             e.printStackTrace();
         }
 
-        // Receive a message on which message to contribute to
-        printServerMessage(socket);
-
-        // Select the number from the menu and send it to the server
+        // Select the number for which event to contribute to and send it to the server
         menuSelection(socket, address, 1, maxNum);
+
+        // This is done to clear the buffer; extra info is sent that will slightly interfere with the client
+        try
+        {
+            receiveData = new byte[1024];
+            DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+            socket.receive(receivePacket);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
 
         // Receive a message asking how much money to donate
         printServerMessage(socket);

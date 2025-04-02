@@ -32,7 +32,6 @@ public class UPDServer
         // An integer to keep track of how many clients connected to the server
         int clientCount = 0;
 
-        // may need to be createdin the while loop
         byte[] receiveData = new byte[1024];
 
         while (true)
@@ -310,6 +309,7 @@ public class UPDServer
                 currentEvents.add(event);
                 Collections.sort(currentEvents);
 
+                // For formatting reasons
                 System.out.println();
             }
             finally
