@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -92,9 +93,27 @@ public class UPDServer
             try
             {
                 int selection = prompt("Welcome to GoFundMe 2.0 (simplified edition).\nWhat would you like to do?");
-                System.out.printf("Client port %d's selection: " + selection, clientSocket.getLocalPort());
 
                 manageClientMenuInput(selection);
+
+                // If the user exits immediately, don't perform anymore logic
+                if(selection == 5)
+                {
+                    return;
+                }
+
+                // Continue using the program if the client's input equals 1
+                boolean continueUse = continueProgram();
+
+                while(continueUse)
+                {
+                    System.out.printf("Client at port %d is continuing use of the server\n", PORT);
+
+                    selection = prompt("\nWhat else would you like to do?");
+                    manageClientMenuInput(selection);
+
+                    continueUse = continueProgram();
+                }
             }
             catch(Exception e)
             {
@@ -159,26 +178,87 @@ public class UPDServer
                 case 1:
                     handleEventCreation();
                     break;
-//                case 2:
-//                    contributeToEvent();
-//                    break;
-//                case 3:
-//                    viewCurrentEvents();
-//                    break;
-//                case 4:
-//                    viewPastEvents();
-//                    break;
-//                default:
-//                    sendMessageToClient("Connection with the server is being severed...");
-//                    closeConnection(dataOutToClient, dataInFromClient);
-//                    System.out.println("\nCommunications with a client ended.");
-//                    break;
+                case 2:
+                    contributeToEvent();
+                    break;
+                case 3:
+                    viewCurrentEvents();
+                    break;
+                case 4:
+                    viewPastEvents();
+                    break;
+                default:
+                    sendMessageToClient("Connection with the server is being severed...");
+                    Thread.currentThread().interrupt();
+                    System.out.printf("\nCommunications with client at port %d ended.\n", PORT);
+                    break;
             }
         }
 
         private void contributeToEvent()
         {
+            System.out.printf("\nClient at port %d is trying to contribute to an new event.", PORT);
 
+            viewCurrentEvents();
+
+            // If there are no current events, simply exit this method to proceed with the program
+            if(currentEvents.isEmpty())
+            {
+                return;
+            }
+
+            int index;
+
+            try
+            {
+                sendMessageToClient("Which event would you like to contribute to?\n" +
+                        "Please provide one of the numbers for the listed events > ");
+
+                System.out.printf("Sending count of current events to client at port %d. Number of events: %d\n",
+                        PORT, currentEvents.size());
+
+                // Since there are events to contribute to, send information to the client to select their choice
+                byte[] outputData = String.valueOf(currentEvents.size()).getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+
+                // Get the client's choice
+                index = Integer.parseInt(receiveClientInput());
+            }
+            catch(IOException e)
+            {
+                System.out.println("Something went wrong sending the size of the currentEvents ArrayList to the " +
+                        "client. Aborting...");
+                return;
+            }
+
+            LOCK.lock();
+            Event selectedEvent = currentEvents.get(--index);
+            LOCK.unlock();
+
+            double contribution;
+
+            // Ask how much money the user would like to contribute
+            sendMessageToClient("How much money would you like to contribute? > ");
+            contribution = Double.parseDouble(receiveClientInput());
+
+            // Add the money to the event and print its updated information
+            LOCK.lock();
+            selectedEvent.addMoney(contribution);
+            LOCK.unlock();
+
+            DecimalFormat df = new DecimalFormat("#.00");
+            String formattedContribution = df.format(contribution);
+
+            String message = String.format("\nYou contributed %s to %s." +
+                    "\nHere is the event's updated information:" +
+                    "\nIndex:\t\t\t\t\t\t%d" +
+                    "\n%s" +
+                    "\n", formattedContribution, selectedEvent.getName(), index + 1, selectedEvent);
+
+            sendMessageToClient(message);
+
+            System.out.println("A client successfully donated to an event.");
         }
 
         private void handleEventCreation()
@@ -296,6 +376,124 @@ public class UPDServer
             {
                 e.printStackTrace();
             }
+        }
+
+        /**
+         * Prints all current events to the client.
+         */
+        private void viewCurrentEvents()
+        {
+            LOCK.lock();
+            try
+            {
+                System.out.println("A client is trying to view the current events list.");
+
+                System.out.println("Updating all events to give client most recent updates.");
+                updateEvents();
+
+                if(!currentEvents.isEmpty())
+                {
+                    printEvents(currentEvents, "current");
+                    System.out.println("Printed current events list to a client.");
+                }
+                else
+                {
+                    sendMessageToClient("\nThere are no current events. You should create one!\n");
+                    System.out.println("Told a client to create an event since the current events list is empty.");
+                }
+            }
+            finally
+            {
+                LOCK.unlock();
+            }
+        }
+
+        /**
+         * Prints all past events to the client.
+         */
+        private void viewPastEvents()
+        {
+            LOCK.lock();
+            try
+            {
+                System.out.println("A client is trying to view the past events list.");
+
+                System.out.println("Updating all events to give client most recent updates.");
+                updateEvents();
+
+                if(!pastEvents.isEmpty())
+                {
+                    printEvents(pastEvents, "past");
+                    System.out.println("Printed past events list to a client.");
+                }
+                else
+                {
+                    sendMessageToClient("\nThere are no past events. You should create one so it's eventually added!\n");
+                    System.out.println("Told a client to create an event since the past events list is empty");
+                }
+            }
+            finally
+            {
+                LOCK.unlock();
+            }
+        }
+
+        private void updateEvents()
+        {
+            for(int i = 0; i < currentEvents.size(); i++)
+            {
+                Event event = currentEvents.get(i);
+
+                // try to set the event's concluded state to true if it's deadline has been met
+                event.updateConcludedState();
+
+                if(event.getHasConcluded())
+                {
+                    currentEvents.remove(event);
+                    pastEvents.add(event);
+                    System.out.printf("Event \"%s\" has concluded. It was moved from the current events list to the " +
+                            "past events list.\n", event.getName());
+                }
+            }
+        }
+
+        /**
+         * Prints the info for every event in a given list to the client.
+         */
+        private void printEvents(ArrayList<Event> events, String descriptor)
+        {
+            StringBuilder message = new StringBuilder("\nHere are all " + descriptor + " events: \n");
+
+            for(int i = 0; i < events.size(); i++)
+            {
+                Event event = events.get(i);
+
+                message.append(String.format("Index:\t\t\t\t\t\t%d" +
+                        "\n%s" +
+                        "\n", i + 1, event.toString()));
+            }
+
+            sendMessageToClient(message.toString());
+        }
+
+        /**
+         * Asks if the client would like to continue using the program.
+         * @return true or false representing if the client would continue using the program
+         */
+        public boolean continueProgram()
+        {
+            System.out.println("Asking a client if they want to keep using the server");
+            sendMessageToClient("\nWould you like to continue using the program?\n" +
+                    "1) Yes\n" +
+                    "2) No\n" +
+                    "> ");
+
+            boolean willContinue = Integer.parseInt(receiveClientInput()) == 1;
+
+            System.out.println("Client is trying to continue using the program: " + willContinue);
+
+            // Continue using the program if the client's input equals 1
+            return willContinue;
         }
     }
 }
