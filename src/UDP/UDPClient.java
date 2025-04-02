@@ -31,7 +31,9 @@ public class UDPClient
 
         while(continueUse)
         {
-            menuSelection(socket, address, 1, 5);
+            mainMenuSelection = menuSelection(socket, address, 1, 5);
+
+            mainMenuLogic(mainMenuSelection, socket, address);
 
             // Ask if the user would like to continue using the program
             continueUse = menuSelection(socket, address, 1, 2) == 1;
@@ -65,26 +67,35 @@ public class UDPClient
     {
         // Receive a message saying there are no events or a list of all current events
         printServerMessage(socket);
+        byte[] receiveData = new byte[4];
+        String maxNumStr = "";
+        int maxNum = 0;
 
-        // Receive a message on which message to contribute to
-        printServerMessage(socket);
-
-        try {
-            byte[] receiveData = new byte[4];
-
+        // need to receive the amount of current events here; if 0, return
+        try
+        {
             // Receive the max number of events to contribute to
             DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
             socket.receive(receivePacket);
-            String maxNumStr = new String(receivePacket.getData(), 0, receivePacket.getLength());
-            int maxNum = Integer.parseInt(maxNumStr);
+            maxNumStr = new String(receivePacket.getData(), 0, receivePacket.getLength());
+            maxNum = Integer.parseInt(maxNumStr);
 
-            // Select the number from the menu and send it to the server
-            menuSelection(socket, address, 1, maxNum);
+            // exit the method if there are no events to contribute to
+            if(maxNum == 0)
+            {
+                return;
+            }
         }
         catch(IOException e)
         {
             e.printStackTrace();
         }
+
+        // Receive a message on which message to contribute to
+        printServerMessage(socket);
+
+        // Select the number from the menu and send it to the server
+        menuSelection(socket, address, 1, maxNum);
 
         // Receive a message asking how much money to donate
         printServerMessage(socket);

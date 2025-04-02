@@ -201,6 +201,19 @@ public class UPDServer
 
             viewCurrentEvents();
 
+            // send the amount of current events to the client to further its program
+            try
+            {
+                byte[] outputData = String.valueOf(currentEvents.size()).getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+            } catch(IOException e)
+            {
+                System.out.println("Something went wrong sending the size of the currentEvents ArrayList to the " +
+                        "client. Aborting...");
+                return;
+            }
+
             // If there are no current events, simply exit this method to proceed with the program
             if(currentEvents.isEmpty())
             {
@@ -212,7 +225,7 @@ public class UPDServer
             try
             {
                 sendMessageToClient("Which event would you like to contribute to?\n" +
-                        "Please provide one of the numbers for the listed events > ");
+                        "Please provide one of the indices for the listed events > ");
 
                 System.out.printf("Sending count of current events to client at port %d. Number of events: %d\n",
                         PORT, currentEvents.size());
@@ -470,7 +483,7 @@ public class UPDServer
 
                 message.append(String.format("Index:\t\t\t\t\t\t%d" +
                         "\n%s" +
-                        "\n", i + 1, event.toString()));
+                        "\n\n", i + 1, event.toString()));
             }
 
             sendMessageToClient(message.toString());
@@ -482,7 +495,6 @@ public class UPDServer
          */
         public boolean continueProgram()
         {
-            System.out.println("Asking a client if they want to keep using the server");
             sendMessageToClient("\nWould you like to continue using the program?\n" +
                     "1) Yes\n" +
                     "2) No\n" +
@@ -490,7 +502,7 @@ public class UPDServer
 
             boolean willContinue = Integer.parseInt(receiveClientInput()) == 1;
 
-            System.out.println("Client is trying to continue using the program: " + willContinue);
+            System.out.printf("Client at port %d is trying to continue using the program: %b\n", PORT, willContinue);
 
             // Continue using the program if the client's input equals 1
             return willContinue;
