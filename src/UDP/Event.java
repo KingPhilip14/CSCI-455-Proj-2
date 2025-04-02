@@ -125,10 +125,11 @@ public class Event implements Comparable<Event>, Serializable
     @Override
     public String toString()
     {
-        return "Event name:\t\t\t\t\t" + name +
-                "\nGoal:\t\t\t\t\t\t$" + goal +
-                "\nCurrent Amount Raised:\t\t$" + currentEarnings +
-                "\nRemaining for Goal:\t\t\t$" + remainingForGoal +
-                "\nDeadline:\t\t\t\t\t" + deadline;
+        return String.format("Event name:\t\t\t\t\t" + name +
+                "\nGoal:\t\t\t\t\t\t$%,.2f" +
+                "\nCurrent Amount Raised:\t\t$%,.2f" +
+                "\nRemaining for Goal:\t\t\t$%,.2f" +
+                "\nDeadline:\t\t\t\t\t" + deadline,
+                goal, currentEarnings, remainingForGoal);
     }
 }

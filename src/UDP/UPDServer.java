@@ -92,7 +92,9 @@ public class UPDServer
             try
             {
                 int selection = prompt("Welcome to GoFundMe 2.0 (simplified edition).\nWhat would you like to do?");
-                System.out.println("Client selection: " + selection);
+                System.out.printf("Client port %d's selection: " + selection, clientSocket.getLocalPort());
+
+                manageClientMenuInput(selection);
             }
             catch(Exception e)
             {
@@ -180,17 +182,26 @@ public class UPDServer
 
             // Get the event details from the client
             String eventName = createEventName();
+            System.out.printf("Successfully received event name from client at port %d\n", PORT);
+
             double goal = Double.parseDouble(createEventGoal());
+            System.out.printf("Successfully received event goal from client at port %d\n", PORT);
+
             String deadline = createEventDeadline();
+            System.out.printf("Successfully received event deadline from client at port %d\n", PORT);
 
             Event newEvent = new Event(eventName, goal, deadline);
             addCurrentEvent(newEvent);
 
-            System.out.printf("\nA new event was received from a client!\n" +
+            System.out.printf("\nA new event was successfully received from client at port %d!\n" +
                     "The event was added to the list of current events." +
                     "\nCurrent event list size: %d" +
                     "\nEvent information:" +
-                    "\n%s\n", currentEvents.size(), newEvent.toString());
+                    "\n%s\n", PORT, currentEvents.size(), newEvent.toString());
+
+            // Send a confirmation message to the client
+            sendMessageToClient(String.format("\nYou successfully created an event with the following information:\n" +
+                    "%s\n", newEvent.toString()));
         }
 
         private void addCurrentEvent(Event event)
@@ -232,7 +243,7 @@ public class UPDServer
         {
             try
             {
-                byte[] outputData = "\nProvide the amount of money you'd like to raise (e.g., 100.00) > ".getBytes();
+                byte[] outputData = "Provide the amount of money you'd like to raise (e.g., 100.00) > ".getBytes();
                 outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
                 clientSocket.send(outputPacket);
 
@@ -251,7 +262,7 @@ public class UPDServer
         {
             try
             {
-                byte[] outputData = String.format("\nWhat day would you like the event to end?\n" +
+                byte[] outputData = String.format("What day would you like the event to end?\n" +
                         "Please note that every event will conclude at %s\n" +
                         "Provide the input as yyyy-mm-dd > ", Event.CONCLUDING_TIME).getBytes();
                 outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
@@ -266,6 +277,20 @@ public class UPDServer
 
             // Default deadline
             return "2100-01-01";
+        }
+
+        private void sendMessageToClient(String message)
+        {
+            try
+            {
+                byte[] outputData = message.getBytes();
+                outputPacket = new DatagramPacket(outputData, outputData.length, this.ADDRESS, this.PORT);
+                clientSocket.send(outputPacket);
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
         }
     }
 }
